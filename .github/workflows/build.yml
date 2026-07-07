@@ -27,7 +27,7 @@ jobs:
       - name: Generate platform folders (android/ios) if missing
         run: |
           if [ ! -d "android" ]; then
-            flutter create . --project-name dito_gym_tracker --platforms android,ios --overwrite=false
+            flutter create . --project-name dito_gym_tracker --platforms android,ios
           fi
 
       - name: Add required Android permissions
