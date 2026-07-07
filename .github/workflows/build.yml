@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -34,6 +35,21 @@ jobs:
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "POST_NOTIFICATIONS" "$MANIFEST"; then
             sed -i '0,/<application/s##<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n\n    <application#' "$MANIFEST"
+          fi
+
+      - name: Enable core library desugaring
+        run: |
+          GRADLE="android/app/build.gradle"
+          if ! grep -q "coreLibraryDesugaringEnabled" "$GRADLE"; then
+            sed -i '/compileOptions {/a\        coreLibraryDesugaringEnabled true' "$GRADLE"
+          fi
+          if ! grep -q "desugar_jdk_libs" "$GRADLE"; then
+            cat >> "$GRADLE" << 'EOF'
+
+          dependencies {
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+          }
+          EOF
           fi
 
       - name: Install dependencies
