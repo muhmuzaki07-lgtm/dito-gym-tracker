@@ -21,7 +21,6 @@ class NotificationService {
 
     await _plugin.initialize(initSettings);
 
-    // Android 13+ requires runtime notification permission.
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -35,6 +34,68 @@ class NotificationService {
       'Jangan lupa cek program hari ini di Dito Gym Tracker.',
       _nextInstanceOfTime(hour, minute),
       const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'workout_reminder',
+          'Workout Reminder',
+          channelDescription: 'Pengingat jadwal latihan harian',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelWorkoutReminder() async {
+    await _plugin.cancel(_workoutReminderId);
+  }
+
+  Future<void> scheduleWaterReminders() async {
+    const hours = [9, 12, 15, 18, 21];
+    for (var i = 0; i < hours.length; i++) {
+      await _plugin.zonedSchedule(
+        _waterReminderIdBase + i,
+        'Minum Air 💧',
+        'Sudah waktunya minum air untuk menjaga performa latihanmu.',
+        _nextInstanceOfTime(hours[i], 0),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'water_reminder',
+            'Water Reminder',
+            channelDescription: 'Pengingat minum air',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    }
+  }
+
+  Future<void> cancelWaterReminders() async {
+    for (var i = 0; i < 5; i++) {
+      await _plugin.cancel(_waterReminderIdBase + i);
+    }
+  }
+
+  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+}      const NotificationDetails(
         android: AndroidNotificationDetails(
           'workout_reminder',
           'Workout Reminder',
