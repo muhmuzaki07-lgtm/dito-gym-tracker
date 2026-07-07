@@ -39,17 +39,32 @@ jobs:
 
       - name: Enable core library desugaring
         run: |
-          GRADLE="android/app/build.gradle"
-          if ! grep -q "coreLibraryDesugaringEnabled" "$GRADLE"; then
-            sed -i '/compileOptions {/a\        coreLibraryDesugaringEnabled true' "$GRADLE"
-          fi
-          if ! grep -q "desugar_jdk_libs" "$GRADLE"; then
-            cat >> "$GRADLE" << 'EOF'
+          if [ -f "android/app/build.gradle.kts" ]; then
+            FILE="android/app/build.gradle.kts"
+            if ! grep -q "esugaringEnabled" "$FILE"; then
+              sed -i '/compileOptions {/a\        isCoreLibraryDesugaringEnabled = true' "$FILE"
+            fi
+            if ! grep -q "desugar_jdk_libs" "$FILE"; then
+              cat >> "$FILE" << 'GRADLEEOF'
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+          }
+          GRADLEEOF
+            fi
+          else
+            FILE="android/app/build.gradle"
+            if ! grep -q "esugaringEnabled" "$FILE"; then
+              sed -i '/compileOptions {/a\        coreLibraryDesugaringEnabled true' "$FILE"
+            fi
+            if ! grep -q "desugar_jdk_libs" "$FILE"; then
+              cat >> "$FILE" << 'GRADLEEOF'
 
           dependencies {
               coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
           }
-          EOF
+          GRADLEEOF
+            fi
           fi
 
       - name: Install dependencies
