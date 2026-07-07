@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vibration/vibration.dart';
 
 class RestTimerState {
   final int totalSeconds;
@@ -29,8 +29,6 @@ class RestTimerState {
       totalSeconds == 0 ? 0 : (totalSeconds - remainingSeconds) / totalSeconds;
 }
 
-/// Drives the rest timer bottom sheet: countdown, vibration + completion
-/// callback when it reaches zero (used to trigger sound/notification).
 class RestTimerNotifier extends StateNotifier<RestTimerState> {
   Timer? _ticker;
   void Function()? onComplete;
@@ -68,9 +66,7 @@ class RestTimerNotifier extends StateNotifier<RestTimerState> {
   }
 
   Future<void> _onFinish() async {
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: 500);
-    }
+    await HapticFeedback.vibrate();
     onComplete?.call();
   }
 
