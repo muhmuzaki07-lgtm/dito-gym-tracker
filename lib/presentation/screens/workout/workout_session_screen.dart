@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/equipment.dart';
 import '../../../core/utils/calculations.dart';
+import '../../../data/datasources/exercise_library.dart';
 import '../../../data/datasources/program_data.dart';
 import '../../../data/models/workout_models.dart';
+import '../../providers/personalization_providers.dart';
 import '../../providers/providers.dart';
 import '../../widgets/exercise_set_row.dart';
+import '../../widgets/exercise_swap_sheet.dart';
 import '../../widgets/rest_timer_sheet.dart';
 
 /// The active workout screen: shows each exercise with sets to log,
@@ -22,14 +26,32 @@ class WorkoutSessionScreen extends ConsumerStatefulWidget {
 
 class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   late WorkoutSession _session;
+  late List<ExercisePrescription> _effectiveExercises;
+  final Set<int> _autoSubstitutedIndexes = {};
   final Stopwatch _stopwatch = Stopwatch();
 
   @override
   void initState() {
     super.initState();
     final repo = ref.read(workoutRepositoryProvider);
+    final availableEquipment = ref.read(availableEquipmentProvider);
+
+    _effectiveExercises = widget.day.exercises.map((ex) {
+      final sub = ExerciseLibrary.autoSubstitute(
+        exercise: ex,
+        availableEquipment: availableEquipment,
+      );
+      return sub ?? ex;
+    }).toList();
+
+    for (var i = 0; i < widget.day.exercises.length; i++) {
+      if (_effectiveExercises[i].name != widget.day.exercises[i].name) {
+        _autoSubstitutedIndexes.add(i);
+      }
+    }
+
     _session = repo.createSession(widget.day.title);
-    for (final ex in widget.day.exercises) {
+    for (final ex in _effectiveExercises) {
       _session.exercises.add(
         ExerciseLog(
           exerciseName: ex.name,
@@ -40,6 +62,22 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
     _stopwatch.start();
     repo.saveSession(_session);
+  }
+
+  Future<void> _swapExercise(int index) async {
+    final availableEquipment = ref.read(availableEquipmentProvider);
+    final chosen = await showExerciseSwapSheet(
+      context,
+      current: _effectiveExercises[index],
+      availableEquipment: availableEquipment,
+    );
+    if (chosen == null) return;
+    setState(() {
+      _effectiveExercises[index] = _effectiveExercises[index].withReplacement(chosen);
+      _session.exercises[index].exerciseName = chosen.name;
+      _autoSubstitutedIndexes.remove(index);
+    });
+    _persist();
   }
 
   void _persist() {
@@ -85,15 +123,16 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-        itemCount: widget.day.exercises.length,
+        itemCount: _effectiveExercises.length,
         itemBuilder: (context, index) {
-          final prescription = widget.day.exercises[index];
+          final prescription = _effectiveExercises[index];
           final log = _session.exercises[index];
           final lastLog = repo.lastExerciseLog(prescription.name);
           final suggestion = Calculations.suggestNext(
             lastLog: lastLog,
             targetRepRange: prescription.repRange,
           );
+          final wasAutoSubstituted = _autoSubstitutedIndexes.contains(index);
 
           return Card(
             margin: const EdgeInsets.only(bottom: 14),
@@ -120,6 +159,12 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                         ),
                       ),
                       IconButton(
+                        icon: const Icon(Icons.swap_horiz_rounded,
+                            color: AppColors.textSecondary),
+                        tooltip: 'Ganti exercise',
+                        onPressed: () => _swapExercise(index),
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.play_circle_outline_rounded,
                             color: AppColors.gold),
                         tooltip: 'Video tutorial',
@@ -127,6 +172,29 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                       ),
                     ],
                   ),
+                  if (wasAutoSubstituted) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded,
+                              size: 14, color: AppColors.info),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Diganti otomatis dari "${widget.day.exercises[index].name}" (equipment tidak tersedia)',
+                              style: const TextStyle(fontSize: 11, color: AppColors.info),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   _OverloadBanner(
                     suggestion: suggestion,

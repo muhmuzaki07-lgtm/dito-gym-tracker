@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import 'theme_presets.dart';
 
 /// Material 3 dark theme used across the whole app.
-/// Rounded corners (20dp), gold accent, clean modern typography.
+/// Rounded corners (20dp), gold accent by default, dynamic per preset.
 class AppTheme {
   AppTheme._();
 
   static const double radius = 20;
 
-  static ThemeData get dark {
+  /// Default theme (Black Gold), kept for any code path that hasn't been
+  /// migrated to the dynamic theme provider.
+  static ThemeData get dark => build(ThemePresets.all[AppThemeId.blackGold]!);
+
+  /// Builds a full ThemeData from a given color preset. Scaffold, AppBar,
+  /// Card, NavigationBar, and buttons all follow the preset; some custom
+  /// widgets that reference [AppColors] directly keep their original
+  /// accent for now (a full per-widget re-theme is a larger follow-up).
+  static ThemeData build(ThemePreset preset) {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.gold,
-        secondary: AppColors.goldMuted,
-        surface: AppColors.surface,
+      scaffoldBackgroundColor: preset.background,
+      colorScheme: ColorScheme.dark(
+        primary: preset.accent,
+        secondary: preset.accent,
+        surface: preset.surface,
         error: AppColors.danger,
         onPrimary: Colors.black,
         onSurface: AppColors.textPrimary,
@@ -29,19 +38,19 @@ class AppTheme {
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
+      appBarTheme: AppBarTheme(
+        backgroundColor: preset.background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: AppColors.textPrimary,
           fontSize: 22,
           fontWeight: FontWeight.w700,
         ),
-        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.card,
+        color: preset.card,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -49,27 +58,27 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.gold.withValues(alpha: 0.18),
+        backgroundColor: preset.surface,
+        indicatorColor: preset.accent.withValues(alpha: 0.18),
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? AppColors.gold : AppColors.textSecondary,
+            color: selected ? preset.accent : AppColors.textSecondary,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.gold : AppColors.textSecondary,
+            color: selected ? preset.accent : AppColors.textSecondary,
           );
         }),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.gold,
+          backgroundColor: preset.accent,
           foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
           shape: RoundedRectangleBorder(
@@ -80,8 +89,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.gold,
-          side: const BorderSide(color: AppColors.gold),
+          foregroundColor: preset.accent,
+          side: BorderSide(color: preset.accent),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
@@ -89,7 +98,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceElevated,
+        fillColor: preset.surfaceElevated,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -101,13 +110,13 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.gold
+              ? preset.accent
               : AppColors.textSecondary,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.gold.withValues(alpha: 0.4)
-              : AppColors.surfaceElevated,
+              ? preset.accent.withValues(alpha: 0.4)
+              : preset.surfaceElevated,
         ),
       ),
     );

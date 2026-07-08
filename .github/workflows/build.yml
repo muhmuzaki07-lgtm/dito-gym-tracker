@@ -34,7 +34,7 @@ jobs:
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "POST_NOTIFICATIONS" "$MANIFEST"; then
-            sed -i '0,/<application/s##<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n\n    <application#' "$MANIFEST"
+            sed -i '0,/<application/s##<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.VIBRATE"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>\n\n    <application#' "$MANIFEST"
           fi
 
       - name: Enable core library desugaring
@@ -71,11 +71,22 @@ jobs:
         run: |
           if [ -f "android/app/build.gradle.kts" ]; then
             FILE="android/app/build.gradle.kts"
-            sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' "$FILE"
+            sed -i -E 's/compileSdk[[:space:]]*=[[:space:]]*flutter\.compileSdkVersion/compileSdk = 36/' "$FILE"
           else
             FILE="android/app/build.gradle"
-            sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/' "$FILE"
-            sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 36/' "$FILE"
+            sed -i -E 's/compileSdk(Version)?[[:space:]]+flutter\.compileSdkVersion/compileSdkVersion 36/' "$FILE"
+          fi
+
+      - name: Enable biometric auth support (FlutterFragmentActivity)
+        run: |
+          MAINACT_KT=$(find android/app/src/main/kotlin -name MainActivity.kt 2>/dev/null | head -n 1)
+          MAINACT_JAVA=$(find android/app/src/main/java -name MainActivity.java 2>/dev/null | head -n 1)
+          if [ -n "$MAINACT_KT" ]; then
+            sed -i 's/import io.flutter.embedding.android.FlutterActivity/import io.flutter.embedding.android.FlutterFragmentActivity/' "$MAINACT_KT"
+            sed -i 's/: FlutterActivity/: FlutterFragmentActivity/' "$MAINACT_KT"
+          elif [ -n "$MAINACT_JAVA" ]; then
+            sed -i 's/io.flutter.embedding.android.FlutterActivity/io.flutter.embedding.android.FlutterFragmentActivity/' "$MAINACT_JAVA"
+            sed -i 's/extends FlutterActivity/extends FlutterFragmentActivity/' "$MAINACT_JAVA"
           fi
 
       - name: Install dependencies

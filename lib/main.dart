@@ -6,6 +6,8 @@ import 'core/services/notification_service.dart';
 import 'data/models/workout_models.dart';
 import 'data/repositories/workout_repository.dart';
 import 'presentation/providers/providers.dart';
+import 'presentation/providers/personalization_providers.dart';
+import 'presentation/screens/lock/lock_screen.dart';
 import 'presentation/widgets/main_nav_shell.dart';
 
 Future<void> main() async {
@@ -41,24 +43,30 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repository),
+        // App starts locked if a PIN has been configured.
+        isAppLockedProvider.overrideWith((ref) => repository.settings().pinEnabled),
       ],
       child: const DitoGymTrackerApp(),
     ),
   );
 }
 
-class DitoGymTrackerApp extends StatelessWidget {
+class DitoGymTrackerApp extends ConsumerWidget {
   const DitoGymTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preset = ref.watch(currentThemePresetProvider);
+    final isLocked = ref.watch(isAppLockedProvider);
+    final themeData = AppTheme.build(preset);
+
     return MaterialApp(
       title: 'Dito Gym Tracker',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      darkTheme: AppTheme.dark,
+      theme: themeData,
+      darkTheme: themeData,
       themeMode: ThemeMode.dark,
-      home: const MainNavShell(),
+      home: isLocked ? const LockScreen() : const MainNavShell(),
     );
   }
 }

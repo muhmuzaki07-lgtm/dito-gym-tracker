@@ -29,6 +29,8 @@ class RestTimerState {
       totalSeconds == 0 ? 0 : (totalSeconds - remainingSeconds) / totalSeconds;
 }
 
+/// Drives the rest timer bottom sheet: countdown, vibration + completion
+/// callback when it reaches zero (used to trigger sound/notification).
 class RestTimerNotifier extends StateNotifier<RestTimerState> {
   Timer? _ticker;
   void Function()? onComplete;

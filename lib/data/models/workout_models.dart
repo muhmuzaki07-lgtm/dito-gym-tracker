@@ -297,13 +297,24 @@ class AppSettings extends HiveObject {
   bool reminderWorkout;
   bool reminderWater;
   String userName;
+  List<String> availableEquipment;
+  String themeId;
+  bool pinEnabled;
+  String? pinHash;
+  bool biometricEnabled;
 
   AppSettings({
     this.useLbs = false,
     this.reminderWorkout = true,
     this.reminderWater = true,
     this.userName = 'Dito',
-  });
+    List<String>? availableEquipment,
+    this.themeId = 'blackGold',
+    this.pinEnabled = false,
+    this.pinHash,
+    this.biometricEnabled = false,
+  }) : availableEquipment = availableEquipment ??
+            const ['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight', 'pullUpBar', 'ezBar', 'smithMachine'];
 }
 
 class AppSettingsAdapter extends TypeAdapter<AppSettings> {
@@ -321,13 +332,18 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       reminderWorkout: fields[1] as bool? ?? true,
       reminderWater: fields[2] as bool? ?? true,
       userName: fields[3] as String? ?? 'Dito',
+      availableEquipment: (fields[4] as List?)?.cast<String>(),
+      themeId: fields[5] as String? ?? 'blackGold',
+      pinEnabled: fields[6] as bool? ?? false,
+      pinHash: fields[7] as String?,
+      biometricEnabled: fields[8] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.useLbs)
       ..writeByte(1)
@@ -335,7 +351,17 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(2)
       ..write(obj.reminderWater)
       ..writeByte(3)
-      ..write(obj.userName);
+      ..write(obj.userName)
+      ..writeByte(4)
+      ..write(obj.availableEquipment)
+      ..writeByte(5)
+      ..write(obj.themeId)
+      ..writeByte(6)
+      ..write(obj.pinEnabled)
+      ..writeByte(7)
+      ..write(obj.pinHash)
+      ..writeByte(8)
+      ..write(obj.biometricEnabled);
   }
 }
 

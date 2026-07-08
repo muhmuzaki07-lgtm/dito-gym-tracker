@@ -7,10 +7,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_presets.dart';
 import '../../../data/models/workout_models.dart';
 import '../../providers/providers.dart';
 import '../../../core/services/notification_service.dart';
+import 'equipment_screen.dart';
+import '../lock/pin_setup_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -48,6 +52,144 @@ class SettingsScreen extends ConsumerWidget {
                   notifyDataChanged(ref);
                 },
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _SectionCard(
+            title: 'Personalisasi',
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.fitness_center_rounded, color: AppColors.gold),
+                title: const Text('Available Equipment'),
+                subtitle: const Text('Pilih alat yang tersedia di gym kamu'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EquipmentScreen()),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _SectionCard(
+            title: 'Tema',
+            children: [
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.85,
+                children: ThemePresets.all.entries.map((entry) {
+                  final id = entry.key;
+                  final preset = entry.value;
+                  final isSelected = settings.themeId == id.storageKey;
+                  return GestureDetector(
+                    onTap: () async {
+                      settings.themeId = id.storageKey;
+                      await ref.read(workoutRepositoryProvider).saveSettings(settings);
+                      notifyDataChanged(ref);
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: preset.background,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? preset.accent : AppColors.divider,
+                              width: isSelected ? 3 : 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: preset.accent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          preset.label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          _SectionCard(
+            title: 'Keamanan',
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Kunci PIN'),
+                subtitle: Text(settings.pinEnabled ? 'PIN aktif' : 'PIN belum diatur'),
+                value: settings.pinEnabled,
+                onChanged: (v) async {
+                  if (v) {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+                    );
+                  } else {
+                    settings.pinEnabled = false;
+                    settings.biometricEnabled = false;
+                    await ref.read(workoutRepositoryProvider).saveSettings(settings);
+                    notifyDataChanged(ref);
+                  }
+                },
+              ),
+              if (settings.pinEnabled) ...[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Ubah PIN'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Fingerprint / Face Unlock'),
+                  subtitle: const Text('Gunakan sensor perangkat jika tersedia'),
+                  value: settings.biometricEnabled,
+                  onChanged: (v) async {
+                    if (v) {
+                      final localAuth = LocalAuthentication();
+                      final supported = await localAuth.isDeviceSupported();
+                      final canCheck = await localAuth.canCheckBiometrics;
+                      if (!supported || !canCheck) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Perangkat ini tidak mendukung fingerprint/face unlock'),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                    }
+                    settings.biometricEnabled = v;
+                    await ref.read(workoutRepositoryProvider).saveSettings(settings);
+                    notifyDataChanged(ref);
+                  },
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
